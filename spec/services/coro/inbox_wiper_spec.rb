@@ -17,7 +17,7 @@ RSpec.describe Coro::InboxWiper do
   before do
     stub_request(:any, graph).to_return(status: 200, body: '{}', headers: { 'Content-Type' => 'application/json' })
     [only_here, shared].each do |contact|
-      contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: SecureRandom.hex(4))
+      contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: SecureRandom.random_number(10**12).to_s)
       conversation = create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox)
       create(:message, account: account, inbox: inbox, conversation: conversation, source_id: "wamid.#{SecureRandom.hex(4)}")
     end
