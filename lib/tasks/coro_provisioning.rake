@@ -11,6 +11,8 @@
 #   CORO_LINE_API_KEY=dh_live_... bundle exec rake 'coro:rekey_inbox[5,1234,5678]'  # new ids
 #   bundle exec rake 'coro:verify_desk[7,5]'
 #   DRY_RUN=1 bundle exec rake 'coro:mark_externally_managed[1,3,4,5,6]'
+#   bundle exec rake 'coro:wipe_inbox[5]'                                   # counts only
+#   CONFIRM=5 BACKUP_DIR=/data/backups bundle exec rake 'coro:wipe_inbox[5]' # backup + wipe
 module CoroProvisioningRake
   module_function
 
@@ -80,6 +82,16 @@ namespace :coro do # rubocop:disable Metrics/BlockLength
 
       { dry_run: CoroProvisioningRake.dry_run?,
         inboxes: Coro::ExternallyManagedMarker.new(inbox_ids: ids, dry_run: CoroProvisioningRake.dry_run?).perform }
+    end
+  end
+
+  desc 'Wipe an inbox history (backup first; keeps Inbox + Channel). Deletes only with CONFIRM=<inbox_id> and no DRY_RUN=1.'
+  task :wipe_inbox, [:inbox_id] => :environment do |_task, args|
+    CoroProvisioningRake.run do
+      CoroProvisioningRake.require_args!(args, :inbox_id)
+      confirmed = ENV.fetch('CONFIRM', nil).to_s == args[:inbox_id].to_s
+      Coro::InboxWiper.new(inbox_id: args[:inbox_id], execute: confirmed && !CoroProvisioningRake.dry_run?,
+                           backup_dir: ENV.fetch('BACKUP_DIR', nil)).perform
     end
   end
 end
