@@ -12,6 +12,9 @@ class Msh::SyncWhatsappTokenJob < ApplicationJob
     return if token.blank?
 
     Channel::Whatsapp.where(phone_number: MSH_PHONE_NUMBER).find_each do |channel|
+      # Externally managed inboxes get their key from coro:provision_inbox / coro:rekey_inbox only.
+      next if channel.externally_managed?
+
       current = channel.provider_config['api_key'].to_s
       next if current == token
 

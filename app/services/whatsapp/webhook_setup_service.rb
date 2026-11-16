@@ -1,4 +1,7 @@
 class Whatsapp::WebhookSetupService
+  # Raised instead of touching Meta for inboxes whose webhook is owned by an external router.
+  class ExternallyManagedError < StandardError; end
+
   def initialize(channel, waba_id = nil, access_token = nil)
     @channel = channel
     @waba_id = waba_id || channel.provider_config['business_account_id']
@@ -7,6 +10,7 @@ class Whatsapp::WebhookSetupService
   end
 
   def perform
+    ensure_not_externally_managed!
     validate_parameters!
 
     # Register phone number if either condition is met:
@@ -18,11 +22,18 @@ class Whatsapp::WebhookSetupService
   end
 
   def register_callback
+    ensure_not_externally_managed!
     validate_parameters!
     setup_webhook
   end
 
   private
+
+  def ensure_not_externally_managed!
+    return unless @channel.respond_to?(:externally_managed?) && @channel.externally_managed?
+
+    raise ExternallyManagedError, 'Webhook is managed externally for this inbox; refusing to change Meta webhook config'
+  end
 
   def validate_parameters!
     raise ArgumentError, 'Channel is required' if @channel.blank?
