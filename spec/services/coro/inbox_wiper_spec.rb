@@ -53,12 +53,16 @@ RSpec.describe Coro::InboxWiper do
     end
 
     it 'wipes this inbox history and contacts that were only in this inbox' do
+      # Counted, not assumed: creating a conversation also adds activity messages.
+      other_inbox_messages = Message.where(inbox_id: other_inbox.id).count
+      expect(other_inbox_messages).to be_positive
+
       result
 
       expect([Conversation, Message, ContactInbox].map { |model| model.where(inbox_id: inbox.id).count }).to eq([0, 0, 0])
       expect(Contact.exists?(only_here.id)).to be false
       expect(Contact.exists?(shared.id)).to be true
-      expect(Message.where(inbox_id: other_inbox.id).count).to eq(1)
+      expect(Message.where(inbox_id: other_inbox.id).count).to eq(other_inbox_messages)
     end
 
     it 'writes a gzipped JSONL backup first' do
