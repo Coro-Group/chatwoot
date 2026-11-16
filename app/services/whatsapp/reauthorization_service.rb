@@ -9,6 +9,8 @@ class Whatsapp::ReauthorizationService
   def perform(access_token, phone_info)
     inbox = @account.inboxes.find(@inbox_id)
     channel = inbox.channel
+    # Embedded-signup reauth would swap in a Meta token and re-point webhooks at Chatwoot.
+    raise StandardError, 'Inbox is externally managed; rekey it via coro:rekey_inbox' if channel.try(:externally_managed?)
 
     # Validate phone number matches for reauthorization
     if phone_info[:phone_number] != channel.phone_number
