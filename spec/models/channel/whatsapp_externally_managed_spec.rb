@@ -5,7 +5,7 @@ require 'rails_helper'
 # Coro: inboxes whose Meta webhook is owned by company-chat (Dualhook WABA-level
 # override). Creating or destroying them must never talk to graph.facebook.com —
 # a phone-level override_callback_uri would hijack the line from Dualhook.
-RSpec.describe Channel::Whatsapp, 'externally managed' do
+RSpec.describe Channel::Whatsapp, '#externally_managed?' do
   let(:account) { create(:account) }
   let(:graph) { %r{\Ahttps://graph\.facebook\.com/} }
   let(:dualhook_templates_url) { 'https://api.dualhook.com/v25.0/557383667453816/message_templates' }
@@ -38,7 +38,7 @@ RSpec.describe Channel::Whatsapp, 'externally managed' do
     expect(channel.reload.provider_config).not_to have_key('verification_pin')
 
     channel.inbox.destroy!
-    channel.reload.destroy! if Channel::Whatsapp.exists?(channel.id)
+    channel.reload.destroy! if described_class.exists?(channel.id)
 
     expect(a_request(:any, graph)).not_to have_been_made
   end
@@ -57,8 +57,8 @@ RSpec.describe Channel::Whatsapp, 'externally managed' do
   end
 
   it 'validates offline and requires the routing keys' do
-    channel = Channel::Whatsapp.new(account: account, phone_number: '+971500000001', provider: 'whatsapp_cloud',
-                                    provider_config: provider_config.except('phone_number_id'))
+    channel = described_class.new(account: account, phone_number: '+971500000001', provider: 'whatsapp_cloud',
+                                  provider_config: provider_config.except('phone_number_id'))
 
     expect(channel).not_to be_valid
     expect(channel.errors[:provider_config].join).to include('phone_number_id')
@@ -88,8 +88,8 @@ RSpec.describe Channel::Whatsapp, 'externally managed' do
   end
 
   it 'still sets a phone-level webhook for ordinary manual inboxes (guard is opt-in)' do
-    channel = Channel::Whatsapp.new(account: account, phone_number: '+971500000002', provider: 'whatsapp_cloud',
-                                    provider_config: provider_config.except('externally_managed'))
+    channel = described_class.new(account: account, phone_number: '+971500000002', provider: 'whatsapp_cloud',
+                                  provider_config: provider_config.except('externally_managed'))
 
     expect(channel.send(:should_auto_setup_webhooks?)).to be true
   end
